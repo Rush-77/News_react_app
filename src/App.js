@@ -3,6 +3,7 @@ import './App.css';
 import React, { Component } from 'react'
 import Navbar from './component/Navbar';
 import News from './component/News';
+import Footer from './component/Footer';
 
 export default class App extends Component {
   render() {
@@ -10,6 +11,7 @@ export default class App extends Component {
       <div>
         <Navbar/>
         <News/>
+        <Footer/>
       </div>
     )
   }

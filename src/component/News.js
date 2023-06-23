@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import NewsItem from './NewsItem'
 import Spinner from './Spinner'
 import PropTypes from 'prop-types'
+import InfiniteScroll from "react-infinite-scroll-component";
 
 export class News extends Component {
   
@@ -35,7 +36,6 @@ export class News extends Component {
   ]
 
   static defaultProps = {
-    apiKey: 'cba0f09a4f3544da9d9d821d621e6af5',
     country: 'in',
     category: 'general',
     pageSize: 9
@@ -50,18 +50,23 @@ export class News extends Component {
     super();
     this.state = {
       articles : this.articles,
-      loading : false,
-      page : 1
+      loading : true,
+      page : 1,
+      totalResults: 0,
+      length: 9,
+      scroll :true
     }
   }
 
   async updatePage(){
-    console.log('inside updatePage');
-    this.setState({loading:true});
+    // this.setState({loading:true});
+    this.props.setProgress(10);
     let newsApiUrl = `https://newsapi.org/v2/top-headlines?country=in&category=${this.props.category}&page=${this.state.page}&pageSize=${this.props.pageSize}&apiKey=${this.props.apiKey}`;
     let data = await fetch(newsApiUrl);
+    this.props.setProgress(70);
     let parseData = await data.json();
     this.setState({articles : parseData.articles?parseData.articles:this.articles,totalResults: parseData.totalResults,loading:false});
+    this.props.setProgress(100);
   }
 
   async componentDidMount(){
@@ -78,23 +83,49 @@ export class News extends Component {
     this.updatePage();
   }
 
+  fetchData = async() =>{
+    this.setState({page: this.state.page + 1});
+    let newsApiUrl = `https://newsapi.org/v2/top-headlines?country=in&category=${this.props.category}&page=${this.state.page+1}&pageSize=${this.props.pageSize}&apiKey=${this.props.apiKey}`;
+    console.log('fetchData url '+ newsApiUrl );
+    let data = await fetch(newsApiUrl);
+    let parseData = await data.json();
+    this.setState({articles : this.state.articles.concat(parseData.articles?parseData.articles:this.state.articles),totalResults: parseData.totalResults,loading:false,length: this.state.length+this.props.pageSize});
+    if(this.state.length >= this.state.totalResults){
+      this.state.scroll = false;
+    }
+    
+  }
+
   render() {
     return (
-      <div className='container my-4'>
+      <>
         <h1 className='text-center text-capitalize'>Today's {this.props.category} News</h1>
-        {this.state.loading && <Spinner/>}
-        <div className="row" >
-          { !this.state.loading && this.state.articles.map((ele)=>{
-            return <div className="col-md-4" key={ele.url}>
-                    <NewsItem  className='col-md-4' title={ele.title} source={ele.source} description={ele.description} url={ele.url} urlToImage={ele.urlToImage} publishedAt={new Date(ele.publishedAt).toUTCString()} author={ele.author} />
-                  </div>
-          })}
-        </div>
-        <div className="container d-flex justify-content-between my-2">
+        {/* {this.state.loading && <Spinner/>} */}
+        <InfiniteScroll
+          dataLength={this.state.length } //This is important field to render the next data
+          next={this.fetchData}
+          hasMore={this.state.scroll}
+          loader={<Spinner/>}
+          endMessage={
+            <p style={{ textAlign: 'center' }}>
+              <b>Yay! You have seen it all</b>
+            </p>
+          }>
+          <div className="container">
+            <div className="row" >
+              { this.state.articles.map((ele)=>{
+                return <div className="col-md-4" key={ele.url}>
+                        <NewsItem  className='col-md-4' title={ele.title} source={ele.source} description={ele.description} url={ele.url} urlToImage={ele.urlToImage} publishedAt={new Date(ele.publishedAt).toUTCString()} author={ele.author} />
+                      </div>
+              })}
+            </div>
+          </div>
+        </InfiniteScroll>
+        {/* <div className="container d-flex justify-content-between my-2">
           <button type="button" className="btn btn-dark" disabled={this.state.page<= 1} onClick={this.prevBtnClick}>Previous</button>
           <button type="button" className="btn btn-dark" disabled={this.state.page >= Math.ceil(this.state.totalResults/this.props.pageSize)} onClick={this.nextBtnClick}>Next</button>
-        </div>
-      </div>
+        </div> */}
+      </>
     )
   }
 }
